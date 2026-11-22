@@ -2,6 +2,8 @@
 
 An interactive, spoiler-aware decision tree for **The Witcher** (2007), **The Witcher 2: Assassins of Kings** (2011) and **The Witcher 3: Wild Hunt** (2015), including the Hearts of Stone and Blood and Wine expansions.
 
+**Live demo:** https://visserdavid.github.io/witcher-trilogy-decision-tree/
+
 ## Features
 
 - **One tree for the whole trilogy.** Each game is a band with its chapters as columns, choices as nodes and threads to later consequences. A dashed thread shows your save carrying over to the next game.
