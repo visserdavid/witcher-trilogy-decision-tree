@@ -20,7 +20,7 @@
     title: "The Witcher",
     subtitle: "Game 1 · 2007 · Enhanced Edition",
     tab: "Game 1",
-    layout: { x0: 20, step: 165, nodeWidth: 148, nodeHeight: 40, height: 330 },
+    layout: { x0: 20, step: 165, nodeWidth: 148, nodeHeight: 40, height: 360 },
     columns: ["Prologue", "Chapter I", "Chapter II", "Chapter III", "Chapter IV", "Chapter V", "Epilogue", "To game 2"],
     sampleRoute: {
       pro: "triss", crates: "refuse", vesna: "yes", leo: "talk", abigail: "protect", sewers: "alone",
@@ -49,7 +49,7 @@
         ]
       },
       {
-        id: "vesna", chapter: "Chapter I: Outskirts of Vizima", at: [1, 166],
+        id: "vesna", chapter: "Chapter I: Outskirts of Vizima", at: [1, 178],
         title: "Escort Vesna", hidden: "Vesna",
         when: "In chapter I, when you meet Vesna.",
         question: "A minor choice with no further consequences.",
@@ -59,7 +59,7 @@
         ]
       },
       {
-        id: "leo", chapter: "Chapter I: Outskirts of Vizima", at: [1, 224],
+        id: "leo", chapter: "Chapter I: Outskirts of Vizima", at: [1, 242],
         title: "Leo's ghost", hidden: "Dead Hand of the Past",
         when: "In chapter I, during the quest Dead Hand of the Past.",
         question: "Do you fight Leo's ghost, or try to talk your way out? A minor choice with no further consequences.",
@@ -69,7 +69,7 @@
         ]
       },
       {
-        id: "abigail", chapter: "Chapter I: Outskirts of Vizima", at: [1, 108], major: true,
+        id: "abigail", chapter: "Chapter I: Outskirts of Vizima", at: [1, 114], major: true,
         title: "Abigail or the villagers", short: "Abigail", hidden: "The village witch",
         when: "At the end of chapter I, when the villagers turn on Abigail.",
         question: "The first real moral choice: do you hand the witch over to the Reverend and the mob, or do you protect her?",
@@ -89,7 +89,7 @@
         ]
       },
       {
-        id: "invest", chapter: "Chapter II: Temple Quarter", at: [2, 108], major: true,
+        id: "invest", chapter: "Chapter II: Temple Quarter", at: [2, 114], major: true,
         title: "The investigation: who works for Azar Javed?", short: "Raymond is Azar?", hidden: "The investigation",
         when: "In chapter II, during the investigation with the detective Raymond.",
         question: "The detective Raymond has you check out suspects. Do you discover that Raymond is dead and Azar has taken his place (the body in the crypt or the right autopsy), or do you point at Ramsmeat or Kalkstein?",
@@ -100,7 +100,7 @@
         note: "Either way, the chapter ends with the fight against Azar and the Professor in the swamp."
       },
       {
-        id: "swamp", chapter: "Chapter II: Temple Quarter", at: [2, 166], major: true,
+        id: "swamp", chapter: "Chapter II: Temple Quarter", at: [2, 178], major: true,
         title: "Swamp: the Order, the Scoia'tael or neutral", short: "Swamp: which side?", hidden: "Force Recon",
         when: "At the end of chapter II, in the swamp (Force Recon).",
         question: "During Force Recon you pick a side for the first time. It is not final yet.",
@@ -121,7 +121,7 @@
         ]
       },
       {
-        id: "vincent", chapter: "Chapter III: Trade Quarter", at: [3, 108], major: true,
+        id: "vincent", chapter: "Chapter III: Trade Quarter", at: [3, 114], major: true,
         title: "The werewolf Vincent Meis", short: "Werewolf Vincent", hidden: "Vincent Meis",
         when: "In chapter III, at the end of the hunt for the beast in the Trade Quarter.",
         question: "Do you kill the werewolf, spare him, or spare him and lift the curse?",
@@ -132,7 +132,7 @@
         ]
       },
       {
-        id: "thaler", chapter: "Chapter III: Trade Quarter", at: [3, 166],
+        id: "thaler", chapter: "Chapter III: Trade Quarter", at: [3, 178],
         title: "Thaler: live or die", short: "Thaler", hidden: "Thaler",
         when: "In chapter III, when Thaler is in danger.",
         question: "According to the wiki it hardly matters in this game, but it does carry over into The Witcher 2.",
@@ -142,7 +142,7 @@
         ]
       },
       {
-        id: "bank", chapter: "Chapter III: Trade Quarter", at: [3, 224], major: true,
+        id: "bank", chapter: "Chapter III: Trade Quarter", at: [3, 242], major: true,
         title: "Gold Rush: the bank robbery", short: "Bank robbery", hidden: "Gold Rush",
         when: "In chapter III, during the quest Gold Rush.",
         question: "Do you help Yaevinn and the Scoia'tael escape, or do you stand with Siegfried and the Order?",
@@ -163,7 +163,7 @@
         ]
       },
       {
-        id: "berengar", chapter: "Chapter IV: Lakeside", at: [4, 108],
+        id: "berengar", chapter: "Chapter IV: Lakeside", at: [4, 114],
         title: "Berengar: kill or spare", short: "Berengar", hidden: "Berengar",
         when: "In chapter IV, during the quest The Paths of Destiny.",
         question: "The fallen witcher who worked for Salamandra.",
@@ -173,7 +173,7 @@
         ]
       },
       {
-        id: "path", chapter: "Chapter IV: Lakeside", at: [4, 166], major: true,
+        id: "path", chapter: "Chapter IV: Lakeside", at: [4, 178], major: true,
         title: "The final path", short: "Final path",
         when: "At the end of chapter IV.",
         question: "The most important split in the game. What you did during the bank robbery limits your options.",
@@ -206,13 +206,13 @@
       }
     ],
     markers: [
-      { id: "xbridge", at: [1, 282], label: "Bridge: Salamandra", jump: "card:pro" },
-      { id: "xcoleman", at: [2, 224], label: "Coleman (The Rat)", hidden: "The Rat", parent: "crates", jump: "card:crates" },
-      { id: "xheat", at: [4, 224], label: "The Heat of the Day", jump: "card:abigail" },
-      { id: "xazar", at: [5, 108], label: "Fight with Azar", jump: "card:berengar" },
-      { id: "xarmor", at: [5, 166], label: "Raven's armor", jump: "card:path" },
-      { id: "xepilogue", at: [6, 108], label: "Epilogue allies", jump: "summary" },
-      { id: "xw2", at: [7, 108], label: "Import into game 2", jump: "el:bridge-w1" }
+      { id: "xbridge", at: [1, 306], label: "Bridge: Salamandra", jump: "card:pro" },
+      { id: "xcoleman", at: [2, 242], label: "Coleman (The Rat)", hidden: "The Rat", parent: "crates", jump: "card:crates" },
+      { id: "xheat", at: [4, 242], label: "The Heat of the Day", jump: "card:abigail" },
+      { id: "xazar", at: [5, 114], label: "Fight with Azar", jump: "card:berengar" },
+      { id: "xarmor", at: [5, 178], label: "Raven's armor", jump: "card:path" },
+      { id: "xepilogue", at: [6, 114], label: "Epilogue allies", jump: "summary" },
+      { id: "xw2", at: [7, 114], label: "Import into game 2", jump: "el:bridge-w1" }
     ],
     edges: [
       ["pro", "xbridge"], ["crates", "xcoleman"], ["abigail", "xheat"], ["abigail", "xepilogue"], ["swamp", "bank"],

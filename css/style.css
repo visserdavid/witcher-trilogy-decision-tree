@@ -145,6 +145,19 @@ a { color: var(--acc); }
 #tree .node:focus-visible { outline: none; }
 #tree .node:focus-visible rect { stroke: var(--dark-pink); stroke-width: 3; }
 
+/* tracing: hovering or focusing a node lights up its whole chain and fades the rest */
+#tree .node, #tree .edge, #tree .thread-group, #tree .path-label { transition: opacity .18s ease, stroke-width .18s ease; }
+#tree.is-tracing .node:not(.is-lit),
+#tree.is-tracing .edge:not(.is-lit),
+#tree.is-tracing .thread-group:not(.is-lit),
+#tree.is-tracing .path-label { opacity: .14; }
+#tree.is-tracing .edge.is-lit { stroke-width: 2.6; stroke-opacity: 1; }
+#tree.is-tracing .edge--next.is-lit { stroke-width: 1.8; stroke-opacity: .9; }
+#tree.is-tracing .thread-group.is-lit .thread { stroke-width: 3.2; }
+@media (prefers-reduced-motion: reduce) {
+  #tree .node, #tree .edge, #tree .thread-group, #tree .path-label { transition: none; }
+}
+
 /* ---------- planner ---------- */
 
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 380px); gap: 28px; align-items: start; }

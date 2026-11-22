@@ -322,5 +322,6 @@
   }
 
   openSummaryOf(planner.state.tab);
+  Tree.enableTracing(tree);
   render();
 })(globalThis);
