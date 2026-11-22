@@ -1,0 +1,9 @@
+{
+  "name": "witcher-trilogy-decision-tree",
+  "private": true,
+  "description": "Interactive, spoiler-aware decision tree for The Witcher 1-3",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test"
+  }
+}
