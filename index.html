@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Witcher Trilogy Decision Tree</title>
+<meta name="description" content="An interactive, spoiler-aware decision tree for The Witcher, The Witcher 2 and The Witcher 3, with choices that carry over from one game to the next.">
+<meta property="og:title" content="Witcher Trilogy Decision Tree">
+<meta property="og:description" content="Every choice in the Witcher trilogy in one interactive tree, with spoilers hidden until you get there.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a player's guide to the whole trilogy, plain and precise; the player decides when to learn more
+   IDEA: three witcher's case files stacked on top of each other, joined by one thread: the save that carries over to the next game
+   PICTURE: three bands (games 1, 2, 3) with choices as nodes, consequences as threads, and a running save thread between the bands
+   COLOUR and TYPE: stone and iron, blood red as the accent, elven green for Iorveth, Temerian blue for Roche, ice blue for Ciri; Cinzel and Source Sans 3
+   LAYOUT: title with spoiler switch, trilogy tree at full width, one tab per game with a route planner and a running outcome, sources */
+:root{color-scheme:light dark;
+--bg:light-dark(#ebe8e2,#111315);--panel:light-dark(#fbfaf7,#1a1d20);--ink:light-dark(#17191c,#e9e6e0);
+--soft:light-dark(#5c6067,#a2a7ae);--line:light-dark(#c8c3b9,#33373c);--acc:light-dark(#9a1b25,#e3545e);
+--elf:light-dark(#356b40,#6fb07c);--tem:light-dark(#2a4f86,#7ea3dc);--ice:light-dark(#2f6d8a,#8cc7e0);
+--grey:light-dark(#6d7279,#9aa0a7);--deep:light-dark(#22262b,#262a2f)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16.5px/1.55 "Source Sans 3",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(28px,4vw,60px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1,h2,h3{font-family:Cinzel,Georgia,serif;line-height:1.08;text-wrap:balance;margin:0 0 .4em}
+h1{font-size:clamp(32px,4.6vw,50px);font-weight:700}h2{font-size:clamp(24px,3vw,32px);font-weight:700}h3{font-size:19px;font-weight:700}
+p{max-width:70ch;margin:.4em 0 1em}
+a{color:var(--acc)}
+.head{background:var(--deep);color:#ece9e3;padding-bottom:12px}
+.head .lede{color:#b9bcc1;font-size:18px}
+.head a{color:#f08a91}
+.legend{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:14px;color:#c9ccd0;margin-top:6px}
+.legend span{display:inline-flex;align-items:center;gap:8px}
+.sw{width:22px;height:14px;border-radius:3px;display:inline-block}
+.hbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0 4px}
+.hbar .lbl{font-size:14px;color:#b9bcc1;margin-right:4px}
+.hbtn{font:inherit;font-size:15px;min-height:44px;padding:8px 14px;border-radius:6px;border:1px solid #4a4f55;background:transparent;color:#ece9e3;cursor:pointer}
+.hbtn[aria-pressed=true]{background:#ece9e3;color:#17191c;border-color:#ece9e3}
+.hbtn:focus-visible{outline:3px solid #f08a91;outline-offset:2px}
+.treeband{background:var(--deep);padding-top:8px}
+.scroll{overflow-x:auto}.treebox{min-width:980px}
+#tree{width:100%;height:auto;display:block;color:#ece9e3}
+#tree .n{cursor:pointer}#tree .n:hover rect{filter:brightness(1.15)}
+#tree .n:focus-visible rect{stroke:#f08a91;stroke-width:3}
+#tree .bt:focus-visible text,#tree .bt:hover text{fill:#f08a91}
+.cap{color:#b9bcc1;font-size:14px;margin:10px 0 0}
+.note{border-left:3px solid var(--acc);padding:4px 0 4px 14px;margin:18px 0;max-width:75ch}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:28px;align-items:start}
+.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);margin:0 0 18px}
+.tab{font:inherit;font-weight:700;font-size:16px;min-height:44px;padding:8px 16px;border:1px solid transparent;border-bottom:0;border-radius:8px 8px 0 0;background:transparent;color:var(--soft);cursor:pointer;white-space:nowrap;font-family:Cinzel,Georgia,serif}
+.tab span{font-family:"Source Sans 3",system-ui,sans-serif;font-weight:400;font-size:14px}
+.tab[aria-selected=true]{background:var(--panel);color:var(--ink);border-color:var(--line);margin-bottom:-1px}
+.tab:focus-visible{outline:3px solid var(--acc);outline-offset:-3px}
+.ch{margin:0 0 26px}.ch>h3{border-bottom:1px solid var(--line);padding-bottom:6px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px 18px;margin:12px 0;scroll-margin-top:20px}
+.card.major{border-color:var(--ink)}
+.card.r-iorveth{border-left:5px solid var(--elf)}.card.r-roche{border-left:5px solid var(--tem)}
+.card.ciri{border-left:5px solid var(--ice)}
+.card.off{opacity:.45}
+.card .tag{font-size:13px;color:var(--soft)}.card .tag b{color:var(--acc);font-weight:700}
+.card h4{margin:2px 0 6px;font-size:17px}
+.card p{margin:0 0 10px;font-size:15.5px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.btn,.opt{font:inherit;font-size:15px;min-height:44px;padding:8px 14px;border-radius:6px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;text-align:left}
+.opt[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.opt:disabled{opacity:.4;cursor:not-allowed;text-decoration:line-through}
+.opt:disabled[aria-pressed=true]{opacity:1;text-decoration:none}
+.btn.reveal{border-style:dashed}
+.btn:focus-visible,.opt:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.fx{margin:10px 0 0;padding:0 0 0 18px;font-size:15px}.fx li{margin:3px 0}
+.lock{color:var(--acc)!important}
+.carry{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--acc);border-radius:8px;padding:14px 18px;margin:0 0 18px;scroll-margin-top:20px}
+.carry h3{font-size:17px;margin-bottom:6px}
+.carry ul{margin:6px 0 0;padding-left:18px;font-size:15.5px}
+.carry p{font-size:15.5px;margin:4px 0}
+.out{background:var(--panel);border:1px solid var(--ink);border-radius:8px;padding:18px;scroll-margin-top:20px}
+.out h3{margin-bottom:6px}
+.out details{border-top:1px solid var(--line);padding:2px 0 10px}
+.out summary{cursor:pointer;font-family:Cinzel,Georgia,serif;font-weight:700;font-size:17px;padding:10px 0 2px;min-height:28px}
+.out dl{margin:0}.out dt{font-weight:700;font-size:14px;color:var(--soft);margin-top:12px}
+.out dd{margin:2px 0 0;font-size:15.5px}
+.out .end,.out .carryrow{border-top:1px dashed var(--line);margin-top:14px;padding-top:2px}
+@media(min-width:901px){.out{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto}}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.bridge{margin-top:34px}
+details.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin:14px 0;scroll-margin-top:20px}
+details.box summary{cursor:pointer;font-weight:700;min-height:28px}
+table{border-collapse:collapse;width:100%;font-size:15.5px;background:var(--panel)}
+th,td{border-bottom:1px solid var(--line);padding:10px 12px;text-align:left;vertical-align:top}
+th{font-size:14px;color:var(--soft)}
+.src{font-size:15px}.src li{margin:4px 0}
+.srcgrid h3{margin-top:22px}
+.small{font-size:14px;color:var(--soft)}
+@media(max-width:600px){table{font-size:14px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;white-space:normal;color:var(--soft);font-size:13px}.stack td:empty{display:none}}
+</style>
+<script>/* On narrow screens, label each table cell with its column header */new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+
+<header class="band head">
+<div class="wrap">
+<h1>Witcher Trilogy Decision Tree</h1>
+<p class="lede">Every choice from The Witcher, The Witcher 2 and The Witcher 3 in one tree, with the threads that run from one game into the next. What you choose in one game carries over to the next one in this planner, just like your save does in the real games.</p>
+<div class="legend">
+<span><i class="sw" style="background:#ece9e3"></i>Major choice</span>
+<span><i class="sw" style="border:1.5px solid #9aa0a7"></i>Minor choice</span>
+<span><i class="sw" style="border:1.5px dashed #9aa0a7"></i>Consequence or ending, not a choice</span>
+<span><i class="sw" style="background:#6fb07c"></i>Iorveth's path</span>
+<span><i class="sw" style="background:#7ea3dc"></i>Roche's path</span>
+<span><i class="sw" style="border:2px solid #8cc7e0"></i>Counts towards Ciri's fate</span>
+<span><i class="sw" style="background:#e3545e;height:3px"></i>Thread to a later consequence</span>
+<span><i class="sw" style="border-top:3px dashed #f08a91;height:0"></i>Your save, carried to the next game</span>
+<span><i class="sw" style="background:#e3545e;width:10px;height:10px;border-radius:50%"></i>Choice made</span>
+</div>
+<div class="hbar" role="group" aria-label="Spoilers">
+<span class="lbl">Spoilers:</span>
+<button class="hbtn" id="sp-hide" type="button">Hide until I get there</button>
+<button class="hbtn" id="sp-show" type="button">Show everything</button>
+<button class="hbtn" id="reset-all" type="button">Clear everything</button>
+</div>
+</div>
+</header>
+
+<section class="band treeband">
+<div class="wrap">
+<div class="scroll"><div class="treebox">
+<figure style="margin:0">
+<svg id="tree" viewBox="0 0 1345 1258" role="img" aria-label="Decision tree of the Witcher trilogy: three stacked bands, one per game, with choices as nodes, threads to later consequences, and a running thread for the save that carries over to the next game"></svg>
+<figcaption class="cap">Each band is one game; click a title or a node to jump to its explanation. The dashed pink thread is your save carrying over to the next game. The first game branches very little, the second truly splits into two paths, and in the third, small and easily missed moments decide the ending.</figcaption>
+</figure>
+</div></div>
+</div>
+</section>
+
+<section class="band">
+<div class="wrap">
+<h2>Route planner</h2>
+<p>Click "I'm here" on a card once you reach that moment in the game. Only then do you see the options, and only after choosing do you see the consequences. Your choices carry over: what you pick in the first game goes on to the second, and the second goes on to the third. The page remembers everything in your browser.</p>
+<div class="grid">
+<div>
+<div class="tabs" role="tablist" aria-label="Choose a game" id="tabs">
+<button class="tab" role="tab" id="tab-w1" aria-controls="panel-w1" data-tab="w1" type="button">Game 1 <span>The Witcher</span></button>
+<button class="tab" role="tab" id="tab-w2" aria-controls="panel-w2" data-tab="w2" type="button">Game 2 <span>Assassins of Kings</span></button>
+<button class="tab" role="tab" id="tab-w3" aria-controls="panel-w3" data-tab="w3" type="button">Game 3 <span>Wild Hunt</span></button>
+</div>
+
+<div class="panel" role="tabpanel" id="panel-w1" aria-labelledby="tab-w1">
+<div class="note">A word of warning up front. Sources usually talk about five or six "major" choices, but the game branches less than it seems. Nearly every choice changes who stands beside or against you and which reward you get, not how the story ends.</div>
+<p class="small">Not playing yourself, but curious how it works? <button class="btn" id="sample" type="button" style="margin-left:6px">Load a sample route (spoilers)</button></p>
+<div id="cards-w1"></div>
+<div class="bridge">
+<h3>What does The Witcher 2 actually carry over?</h3>
+<p>The Witcher 2 can import a final save from the first game. But its influence is far smaller than the marketing suggested at the time. It is mostly about gear and a handful of references, not different storylines.</p>
+<details class="box" id="bridge-w1">
+<summary>Show what carries over (spoilers)</summary>
+<table class="stack" style="margin-top:12px">
+<thead><tr><th>From The Witcher</th><th>Effect in The Witcher 2</th><th>Certainty</th></tr></thead>
+<tbody>
+<tr><td>Equipped swords and Raven's armor</td><td>Carried over as starting gear, but weaker than in the first game and quickly outclassed.</td><td>Multiple sources</td></tr>
+<tr><td>Princess Adda saved or killed</td><td>Foltest mentions her fate early on. Saved: she is alive and married to Radovid. Without an import she is dead.</td><td>Multiple sources</td></tr>
+<tr><td>Thaler alive</td><td>A messenger brings you a package from him.</td><td>Multiple sources</td></tr>
+<tr><td>Path: the Order, the Scoia'tael or neutral</td><td>Your bond with Siegfried and Yaevinn is mentioned; those who sided with the Order notice a few extra effects in chapter 3.</td><td>Official guide, forums</td></tr>
+<tr><td>Gold</td><td>A small part carries over, not one to one.</td><td>Forums only</td></tr>
+<tr><td>Shani or Triss</td><td>The second game follows the Triss storyline either way. Players report at most a mention of Shani in a book.</td><td>Forums only</td></tr>
+</tbody>
+</table>
+<p class="small" style="margin-top:12px">Note: players also report inconsistencies, such as a book calling Adda dead while she is alive in the import, or an import wrongly assuming the Order's path. Choices from the first game do not count in The Witcher 3; it only reads a save from the second game.</p>
+</details>
+</div>
+</div>
+
+<div class="panel" role="tabpanel" id="panel-w2" aria-labelledby="tab-w2" hidden>
+<div class="carry" id="carry-w1"></div>
+<p>Unlike the first game, this one truly splits. After chapter 1 you play an entirely different second chapter, in a different place and with different people. To see both halves, you have to play the game twice. Cards from the path you are not playing are faded out.</p>
+<div class="note">An honest warning about the sources: many guides contradict each other on long-term consequences. Only what appears in at least one solid guide and is not contradicted by another is included here. Where that was not possible, it says so.</div>
+<div id="cards-w2"></div>
+<div class="bridge">
+<h3>The bridge to The Witcher 3</h3>
+<p>The Witcher 3 can import your save from the second game. Without a save, Morvran Voorhis asks you five questions in Vizima that settle the same things. The questions themselves give away a lot, so only open this section once you have finished the second game.</p>
+<details class="box" id="bridge-w2">
+<summary>Show the five points that count (spoilers)</summary>
+<table class="stack" style="margin-top:12px">
+<thead><tr><th>Choice in game 2</th><th>Consequence in game 3</th><th>Weight</th></tr></thead>
+<tbody>
+<tr><td>Aryan La Valette spared or killed</td><td>Only a few lines of dialogue from one character.</td><td>Small</td></tr>
+<tr><td>With Roche or with Iorveth</td><td>Only some dialogue with a character you meet later.</td><td>Small</td></tr>
+<tr><td>Triss rescued, or Anaïs or Saskia instead</td><td>Triss lives either way, but without special feelings for Geralt. Anaïs and Saskia do not appear in the third game.</td><td>Small</td></tr>
+<tr><td>Síle de Tansarville saved or not</td><td>If she lives, she has a small role in one quest late in the game.</td><td>Small</td></tr>
+<tr><td>Letho spared or killed</td><td>If he lives, you get an extra quest and he plays a part in later main quests. By default he is dead.</td><td>Large</td></tr>
+</tbody>
+</table>
+<p class="small" style="margin-top:12px">According to players who inspected the import file, an import reads one extra point: whether Radovid has Anaïs. Henselt's fate is not in it, even though some guides claim it carries over. So don't count on that.</p>
+</details>
+</div>
+</div>
+
+<div class="panel" role="tabpanel" id="panel-w3" aria-labelledby="tab-w3" hidden>
+<div class="carry" id="carry-w2"></div>
+<p>Hearts of Stone and Blood and Wine are listed separately, at the bottom.</p>
+<div class="note">A tip from a sparring partner: in this game especially, it pays not to read ahead. The moments that decide Ciri's fate work best if you choose the way Geralt would react in that situation. Playing with a cheat sheet turns a father-daughter story into a points tally.</div>
+<div id="cards-w3"></div>
+</div>
+</div>
+
+<aside class="out" aria-live="polite">
+<h3>Your trilogy</h3>
+<details id="sum-w1"><summary>Game 1: The Witcher</summary><dl id="out-w1"></dl></details>
+<details id="sum-w2"><summary>Game 2: Assassins of Kings</summary><dl id="out-w2"></dl></details>
+<details id="sum-w3"><summary>Game 3: Wild Hunt</summary><dl id="out-w3"></dl></details>
+</aside>
+</div>
+</div>
+</section>
+
+<section class="band" style="background:var(--panel)">
+<div class="wrap srcgrid">
+<h2>Sources and notes</h2>
+
+<h3>The Witcher</h3>
+<p>The basis is the decision checklist on the Witcher Wiki. It lacks the investigation in chapter II, which was filled in from the quest pages and two walkthroughs. The effects in The Witcher 2 come from the official Prima guide and forum reports from players who imported a save; the latter are less reliable and marked as such.</p>
+<ul class="src">
+<li><a href="https://witcher-games.fandom.com/wiki/The_Witcher_decision_checklist">Witcher Wiki: The Witcher decision checklist</a></li>
+<li><a href="https://witcher-games.fandom.com/wiki/Anatomy_of_a_Crime">Witcher Wiki: Anatomy of a Crime</a> and <a href="https://witcher-games.fandom.com/wiki/What_Lies_Beneath">What Lies Beneath</a></li>
+<li><a href="https://www.gamebanshee.com/thewitcher/walkthrough/vizimaconfidential.php">GameBanshee: Vizima Confidential</a></li>
+<li><a href="https://www.gamepressure.com/thewitcher/investigation-explained/zfe4f">Gamepressure: Investigation explained</a></li>
+<li><a href="https://gamerguides.com/the-witcher/guide/walkthrough/chapter-4-wraiths-ripples-and-racism/the-heat-of-the-day-part-ii">GamerGuides: The Heat of the Day</a></li>
+<li><a href="https://primagames.com/eguides/the-witcher-2-assassins-of-kings-eguide/walkthrough">Prima Games: The Witcher 2 eGuide</a></li>
+<li><a href="https://rpgcodex.net/forums/threads/save-import-in-the-witcher-2.59702/">RPG Codex: Save import in The Witcher 2</a></li>
+<li><a href="https://gamefaqs.gamespot.com/boards/975399-the-witcher-2-assassins-of-kings/59269089">GameFAQs: choices from game 1 in game 2</a></li>
+<li><a href="https://www.gog.com/forum/the_witcher_2/advantages_of_bringing_witcher_i_save">GOG forum: advantages of importing</a></li>
+<li><a href="https://steamcommunity.com/app/292030/discussions/0/1697168437872958494">Steam forum: game 1 and The Witcher 3</a></li>
+</ul>
+
+<h3>The Witcher 2</h3>
+<p>The structure of the endings comes from the official Prima guide. The choices per chapter were checked against the Witcher Wiki, Gamepressure, GameBanshee and player reports. For the consequences in The Witcher 3, the GamerGuides guide is the basis. SegmentNext contained contradictions; it is only used where another source confirms it.</p>
+<ul class="src">
+<li><a href="https://primagames.com/eguides/the-witcher-2-assassins-of-kings-eguide/walkthrough/endings-guide">Prima Games: Endings Guide</a> and <a href="https://primagames.com/eguides/the-witcher-2-assassins-of-kings-eguide/walkthrough/planning-your-game">Planning Your Game</a></li>
+<li><a href="https://witcher.fandom.com/wiki/Where_is_Triss_Merigold%3F">Witcher Wiki: Where is Triss Merigold?</a></li>
+<li><a href="https://gamepressure.com/thewitcher2assassinsofkingschoices/the-floating-prison/z52d78">Gamepressure: The Floating Prison</a> and <a href="https://gamepressure.com/thewitcher2assassinsofkingschoices/endings/z42d8f">Endings</a></li>
+<li><a href="https://www.gamebanshee.com/thewitcher2/walkthrough/epiloguetheassassinsofkingsroche.php">GameBanshee: epilogue</a></li>
+<li><a href="https://gamesradar.com/witcher-story-recap/2">GamesRadar: story recap</a></li>
+<li><a href="https://segmentnext.com/the-witcher-2-choices">SegmentNext: Choices Guide</a> (with reservations)</li>
+<li><a href="https://www.gamerguides.com/the-witcher-3-wild-hunt/guide/walkthrough/white-orchard/should-you-bow-to-emhyr-in-the-witcher-3">GamerGuides: Imperial Audience (The Witcher 3)</a></li>
+<li><a href="https://www.gog.com/forum/the_witcher_3_wild_hunt/w2importcsv_file_and_witcher_2_choices_slight_w2_spoilers">GOG forum: The Witcher 3's import file</a></li>
+<li><a href="https://gog.com/forum/the_witcher_2/is_there_some_kind_of_story_choices_guide">GOG forum: player overview of choices</a></li>
+</ul>
+
+<h3>The Witcher 3</h3>
+<p>For Ciri's fate and the political endings, several guides were compared side by side (PC Gamer, GamesRadar, Twinfinite, Allthings.how, Game8 and Gamepressure); where they differ, the page follows the majority. The quests in Velen and Skellige were checked against GamerGuides, GameBanshee and player experiences. The guides do not fully agree on the exact rule behind Ciri's fate; the page uses the most common explanation.</p>
+<ul class="src">
+<li><a href="https://www.pcgamer.com/all-witcher-3-endings-ciri-blood-and-wine-how-many/">PC Gamer: How to get every Witcher 3 ending</a></li>
+<li><a href="https://www.gamesradar.com/witcher-3-ending-best-worst">GamesRadar: Every Witcher 3 ending explained</a></li>
+<li><a href="https://twinfinite.net/guides/the-witcher-3-all-endings-get-how/3/">Twinfinite: Something Ends, Something Begins</a></li>
+<li><a href="https://allthings.how/how-to-get-every-ending-in-the-witcher-3-and-its-dlcs/">Allthings.how: every ending in The Witcher 3 and its DLCs</a></li>
+<li><a href="https://game8.co/games/Witcher3/archives/280930">Game8: Reason of State</a></li>
+<li><a href="https://gamerguides.com/the-witcher-3-wild-hunt/guide/walkthrough/skellige/kings-gambit">GamerGuides: King's Gambit</a> and <a href="https://gamebanshee.com/thewitcher3/walkthrough/kingsgambit.php">GameBanshee: King's Gambit</a></li>
+<li><a href="https://gamepressure.com/thewitcher3/return-to-the-crookback-bog/z87863">Gamepressure: Return to Crookback Bog</a></li>
+<li><a href="https://embed.gog.com/forum/the_witcher_3_wild_hunt/saving_anna_requirements">GOG forum: the order of events at the Whispering Hillock</a></li>
+<li><a href="https://consolepulse.com/multiplatform/the-witcher/guides/the-witcher-3-kaer-morhen-allies-and-fates">ConsolePulse: allies at Kaer Morhen</a></li>
+<li><a href="https://www.gamepressure.com/thewitcher3bloodandwine/available-endings/z38f14">Gamepressure: Blood and Wine endings</a></li>
+<li><a href="https://screenrant.com/witcher-3-game-hearts-stone-ending-explained/">Screen Rant: Hearts of Stone ending</a></li>
+</ul>
+<p class="small" style="margin-top:28px">This is an unofficial fan project. It is not affiliated with or endorsed by CD PROJEKT RED. The Witcher and all related names are trademarks of their respective owners.</p>
+</div>
+</section>
+
+<script>
+{
+/* ---------- DATA: game 1 ----------
+   nodes: tree nodes (c = column, y = vertical position, t = label, h = spoiler-free label, k = major | minor | cons | end)
+   edges: [from, to] threads within the band
+   D:     choice cards (t = title, ht = spoiler-free title, when = where it happens, q = the question, o = [key, label, consequences]) */
+const row1=r=>50+r*58;
+const W1={key:'w1',name:'The Witcher',sub:'Game 1 · 2007 · Enhanced Edition',X0:20,step:165,W:148,H:40,headY:22,lineY:32,oy:40,bh:330,
+cols:['Prologue','Chapter I','Chapter II','Chapter III','Chapter IV','Chapter V','Epilogue','To game 2'],
+nodes:[
+{id:'pro',c:0,y:row1(0),t:'Vesemir or Triss',h:'Attack on Kaer Morhen',k:'minor'},
+{id:'crates',c:1,y:row1(0),t:'Haren Brogg\'s crates',k:'minor'},
+{id:'abigail',c:1,y:row1(1),t:'Abigail',k:'major'},
+{id:'vesna',c:1,y:row1(2),t:'Escort Vesna',h:'Vesna',k:'minor'},
+{id:'leo',c:1,y:row1(3),t:'Leo\'s ghost',h:'Dead Hand of the Past',k:'minor'},
+{id:'xbridge',c:1,y:row1(4),t:'Bridge: Salamandra',k:'cons'},
+{id:'sewers',c:2,y:row1(0),t:'Sewers: Siegfried?',h:'The sewers',k:'minor'},
+{id:'invest',c:2,y:row1(1),t:'Raymond is Azar?',h:'The investigation',k:'major'},
+{id:'swamp',c:2,y:row1(2),t:'Swamp: which side?',h:'Force Recon',k:'major'},
+{id:'xcoleman',c:2,y:row1(3),t:'Coleman (The Rat)',h:'The Rat',k:'cons'},
+{id:'alvin',c:3,y:row1(0),t:'Alvin: Triss or Shani',h:'A home for Alvin',k:'major'},
+{id:'vincent',c:3,y:row1(1),t:'Werewolf Vincent',h:'Vincent Meis',k:'major'},
+{id:'thaler',c:3,y:row1(2),t:'Thaler',k:'minor'},
+{id:'bank',c:3,y:row1(3),t:'Bank robbery',h:'Gold Rush',k:'major'},
+{id:'lake',c:4,y:row1(0),t:'Lake: village or vodyanoi',h:'The lake',k:'major'},
+{id:'berengar',c:4,y:row1(1),t:'Berengar',k:'minor'},
+{id:'path',c:4,y:row1(2),t:'Final path',k:'major'},
+{id:'xheat',c:4,y:row1(3),t:'The Heat of the Day',k:'cons'},
+{id:'adda',c:5,y:row1(0),t:'Adda the striga',h:'The striga',k:'major'},
+{id:'xazar',c:5,y:row1(1),t:'Fight with Azar',k:'cons'},
+{id:'xarmor',c:5,y:row1(2),t:'Raven\'s armor',k:'cons'},
+{id:'hunt',c:6,y:row1(0),t:'King of the Wild Hunt',k:'minor'},
+{id:'xepilogue',c:6,y:row1(1),t:'Epilogue allies',k:'cons'},
+{id:'xw2',c:7,y:row1(1),t:'Import into game 2',k:'cons'}],
+edges:[['pro','xbridge'],['crates','xcoleman'],['abigail','xheat'],['abigail','xepilogue'],['swamp','bank'],['bank','path'],['path','xarmor'],['path','xepilogue'],['alvin','xepilogue'],['vincent','xepilogue'],['berengar','xazar'],['adda','xepilogue'],['adda','xw2'],['thaler','xw2'],['path','xw2'],['lake','xw2'],['xarmor','xw2']],
+D:[
+{ch:'Prologue',id:'pro',t:'Help Vesemir or Triss',ht:'The attack on Kaer Morhen',when:'In the prologue, during the attack on Kaer Morhen.',q:'During the attack on Kaer Morhen, you either fight the Frightener with Vesemir or protect the laboratory with Triss.',o:[
+['vesemir','Help Vesemir',['Vesemir later gives you a red meteorite.','At the bridge in chapter I you face Salamandra with a mutant dog; the cutscene is negative about your choice.']],
+['triss','Help Triss',['You can take a sapphire from Savolla\'s corpse.','At the bridge in chapter I only Salamandra, without a dog; the cutscene is positive.']]]},
+{ch:'Chapter I: Outskirts of Vizima',id:'crates',t:'Haren Brogg\'s crates',when:'In chapter I, at Haren Brogg\'s weapon crates.',q:'Do you give the weapons to the Scoia\'tael or not?',o:[
+['give','Give the weapons',['The Scoia\'tael use them to kill Coleman in chapter II, as soon as you go to the Hairy Bear after talking to the detective. The side quest The Rat then almost always fails.','Before the swamp in chapter II, the dwarves may react to you differently because of what you did with these crates.']],
+['refuse','Don\'t give them (or kill the Scoia\'tael)',['Coleman stays alive.','If you refuse, Golan Vivaldi is locked up in chapter II; you buy his freedom for 200 orens to get two books.']]]},
+{ch:'Chapter I: Outskirts of Vizima',id:'vesna',t:'Escort Vesna',ht:'Vesna',when:'In chapter I, when you meet Vesna.',q:'A minor choice with no further consequences.',o:[
+['yes','Escort her',['You can meet her at the mill at night.']],
+['no','Don\'t help',['Bandits kill her.']]]},
+{ch:'Chapter I: Outskirts of Vizima',id:'leo',t:'Leo\'s ghost',ht:'Dead Hand of the Past',when:'In chapter I, during the quest Dead Hand of the Past.',q:'Do you fight Leo\'s ghost, or try to talk your way out? A minor choice with no further consequences.',o:[
+['fight','Fight',['Leo\'s ghost drops a red meteorite.']],
+['talk','Talk',['Two of the three dialogue paths still lead to Leo\'s ghost appearing; only one avoids the fight.']]]},
+{ch:'Chapter I: Outskirts of Vizima',id:'abigail',major:1,t:'Abigail or the villagers',ht:'The village witch',when:'At the end of chapter I, when the villagers turn on Abigail.',q:'The first real moral choice: do you hand the witch over to the Reverend and the mob, or do you protect her?',o:[
+['protect','Protect Abigail',['You fight the guilty villagers; Abigail fights the Beast alongside you.','If she survives that fight, you see her again in chapter IV and she helps you in the epilogue.','The quest The Heat of the Day in chapter IV ends differently.']],
+['surrender','Hand Abigail over',['She dies; you fight the Beast together with the villagers and don\'t have to fight them afterwards.','In chapter IV a nameless healer lives in the hut; in the epilogue you have to fight Abigail.','In The Heat of the Day you are told that there is innocent blood on your hands.']]]},
+{ch:'Chapter II: Temple Quarter',id:'sewers',t:'Sewers: with Siegfried or alone',ht:'The sewers',when:'In chapter II, when you go after the cockatrice in the sewers.',q:'Do you go into the sewers with Siegfried, or kill the cockatrice alone?',o:[
+['siegfried','With Siegfried',['You get onto the dike easily and the Order\'s weaponsmith trades with you.','At the hospital you need the city guard\'s signet ring or a 30-oren bribe.']],
+['alone','Alone',['You can walk straight into the hospital.','The Order\'s weaponsmith won\'t trade with you; the dwarven smith will if you helped the Scoia\'tael.','At the dike you need the signet ring or 60 orens.']]]},
+{ch:'Chapter II: Temple Quarter',id:'invest',major:1,t:'The investigation: who works for Azar Javed?',ht:'The investigation',when:'In chapter II, during the investigation with the detective Raymond.',q:'The detective Raymond has you check out suspects. Do you discover that Raymond is dead and Azar has taken his place (the body in the crypt or the right autopsy), or do you point at Ramsmeat or Kalkstein?',o:[
+['azar','Unmask Azar',['You see through the game; with Kalkstein\'s help you can confront or bluff Azar on your own terms.']],
+['wrong','Accuse Ramsmeat or Kalkstein',['An innocent takes the blame and Azar uses you to get rid of his rivals.','As you leave the tower, Azar reveals himself anyway and takes the book.']]],
+note:'Either way, the chapter ends with the fight against Azar and the Professor in the swamp.'},
+{ch:'Chapter II: Temple Quarter',id:'swamp',major:1,t:'Swamp: the Order, the Scoia\'tael or neutral',ht:'Force Recon',when:'At the end of chapter II, in the swamp (Force Recon).',q:'During Force Recon you pick a side for the first time. It is not final yet.',o:[
+['order','The Order',['The Scoia\'tael are hostile in the city.']],
+['elves','The Scoia\'tael',['The Order is hostile; their merchant and weaponsmith won\'t help you.']],
+['neutral','Neutral',['The Order\'s merchant won\'t help you; the Scoia\'tael smith will.']]]},
+{ch:'Chapter III: Trade Quarter',id:'alvin',major:1,t:'Who do you leave Alvin with?',ht:'A home for Alvin',when:'In chapter III, when you look for a safe place for Alvin.',q:'Triss or Shani. This decides the romance and the type of ending.',o:[
+['triss','Triss',['In chapter IV Alvin wanders off to the ruins, where you meet the gambling ghost.','Shani is angry in chapter V, but still helps and talks to you. Her second romance card is lost.','Triss fights alongside you in the epilogue.']],
+['shani','Shani',['In chapter IV Alvin goes to the riverbank and gets a dog.','Triss is angry in chapter V, but still helps and talks to you. Her second romance card is lost.','Shani fights alongside you in the epilogue.']]]},
+{ch:'Chapter III: Trade Quarter',id:'vincent',major:1,t:'The werewolf Vincent Meis',ht:'Vincent Meis',when:'In chapter III, at the end of the hunt for the beast in the Trade Quarter.',q:'Do you kill the werewolf, spare him, or spare him and lift the curse?',o:[
+['cure','Spare and cure him',['At the New Narakort, Vincent and some guards come to fight Salamandra with you.','Together with Beauty and the Beast, 6000 extra XP; the novice praises you in the epilogue.']],
+['spare','Spare him, no cure',['Vincent fights alongside you as a werewolf, with a few guards.']],
+['kill','Kill him',['1500 XP and Werewolf\'s Fur, used for the potion Werewolf\'s Wrath, which grants the Predator talent. The quest Beauty and the Beast fails.','If you then enter the inn, you are arrested and have to fight guards.','Carmen is unhappy; in chapter V a different captain stands at the dike.']]]},
+{ch:'Chapter III: Trade Quarter',id:'thaler',t:'Thaler: live or die',ht:'Thaler',when:'In chapter III, when Thaler is in danger.',q:'According to the wiki it hardly matters in this game, but it does carry over into The Witcher 2.',o:[
+['lives','Let him live',['He hangs around in the inn and you can talk to him.']],
+['dies','Let him die',['No further consequences in this game.']]]},
+{ch:'Chapter III: Trade Quarter',id:'bank',major:1,t:'Gold Rush: the bank robbery',ht:'Gold Rush',when:'In chapter III, during the quest Gold Rush.',q:'Do you help Yaevinn and the Scoia\'tael escape, or do you stand with Siegfried and the Order?',o:[
+['yaevinn','Yaevinn',['The Scoia\'tael fight alongside you against Azar and the Professor.','In chapter IV you can only choose the Scoia\'tael or neutral.']],
+['siegfried','Siegfried',['The Order fights alongside you.','In chapter IV you can only choose the Order or neutral.']]]},
+{ch:'Chapter IV: Lakeside',id:'lake',major:1,t:'The conflict at the lake',ht:'The lake',when:'In chapter IV, in Lakeside, where the villagers and the vodyanoi face each other.',q:'Do you side with the village, with the vodyanoi, or look for a compromise?',o:[
+['village','The village',['Julian gives you a large diamond.']],
+['vodyanoi','The vodyanoi',['The vodyanoi priest gives you the ceremonial sword of Deithwen.']],
+['compromise','Compromise',['The Lady of the Lake gives you the silver sword Aerondight.']]]},
+{ch:'Chapter IV: Lakeside',id:'berengar',t:'Berengar: kill or spare',ht:'Berengar',when:'In chapter IV, during the quest The Paths of Destiny.',q:'The fallen witcher who worked for Salamandra.',o:[
+['kill','Kill him',['You take his witcher medallion, which weakens Azar in chapter V (according to the wiki, about a quarter of his vitality on normal difficulty).','His body also yields scrolls, a letter and roughly 850 orens (guides differ on the exact amount).']],
+['spare','Spare him',['Berengar turns up to fight alongside you against Azar, though he doesn\'t amount to much. You don\'t get his medallion.']]]},
+{ch:'Chapter IV: Lakeside',id:'path',major:1,t:'The final path',when:'At the end of chapter IV.',q:'The most important split in the game. What you did during the bank robbery limits your options.',o:[
+['order','The Order',['In chapter V the Scoia\'tael are your enemies.','Reward: the Order\'s Raven\'s armor.','Siegfried fights alongside you through Vizima in the epilogue; you fight Yaevinn\'s ghost.']],
+['elves','The Scoia\'tael',['In chapter V the Order is your enemy and you escort refugees to the hospital.','Reward: the elven Raven\'s armor.','Yaevinn fights alongside you in the epilogue; you fight Siegfried\'s ghost.']],
+['neutral','Neutral (the witcher\'s way)',['In chapter V both factions are your enemies and you escort nurses.','Reward: the neutral Raven\'s armor.','Triss fights alongside you through Vizima; you either fight Siegfried and Yaevinn or part in peace, depending on your answers. On the Ice Plains you fight their ghosts.']]]},
+{ch:'Chapter V: Old Vizima',id:'adda',major:1,t:'Princess Adda, the striga',ht:'The striga\'s curse',when:'In chapter V, in Old Vizima.',q:'Do you lift the curse or kill her?',o:[
+['save','Save her',['You get a steel sword; Adda fights alongside you as a striga in the epilogue.','In The Witcher 2 she is alive and married to Radovid.']],
+['kill','Kill her',['From her heart you brew a potion that grants talents.','In the epilogue Vincent helps as a werewolf, or Count de Wett if you also killed Vincent.']]]},
+{ch:'Epilogue',id:'hunt',t:'The King of the Wild Hunt',when:'In the epilogue, when the King of the Wild Hunt makes you an offer.',q:'Do you let him take Jacques de Aldersberg\'s soul?',o:[
+['refuse','Refuse',['You have to defeat him; he summons ghosts as reinforcements.']],
+['accept','Accept',['He doesn\'t fight you; you get less experience.']]]}]};
+
+/* ---------- DATA: game 2 ---------- (r = path: i = Iorveth, r = Roche; w3 = counts in The Witcher 3) */
+const W2={key:'w2',name:'The Witcher 2',sub:'Game 2 · 2011 · Assassins of Kings',X0:50,step:205,W:160,H:38,headY:26,lineY:36,oy:440,bh:405,
+cols:['Prologue','Chapter 1','Chapter 2','Chapter 3','Epilogue','To game 3'],
+nodes:[
+{id:'imp1',c:0,y:60,t:'Save from game 1',k:'cons'},
+{id:'aryan',c:0,y:205,t:'Aryan La Valette',k:'minor',w3:1},
+{id:'sword',c:1,y:175,t:'Iorveth\'s sword',k:'minor'},
+{id:'cross',c:1,y:235,t:'At a Crossroads',k:'major',w3:1},
+{id:'prison',c:2,y:60,t:'The Floating Prison',k:'major',r:'i'},
+{id:'stennis',c:2,y:110,t:'The fate of Stennis',k:'minor',r:'i'},
+{id:'henselt',c:2,y:300,t:'The Siege of Vergen',k:'major',r:'r'},
+{id:'greater',c:3,y:60,t:'For the Greater Good',k:'major',r:'i',w3:1},
+{id:'temeria',c:3,y:300,t:'For Temeria!',k:'major',r:'r',w3:1},
+{id:'anais',c:3,y:350,t:'Of His Blood and Bone',k:'minor',r:'r'},
+{id:'sile',c:3,y:175,t:'Síle\'s fate',k:'minor',w3:1},
+{id:'dragon',c:3,y:235,t:'Enter the Dragon',k:'minor'},
+{id:'letho',c:4,y:205,t:'Final conversation',k:'major',w3:1},
+{id:'w3',c:5,y:205,t:'Import into game 3',k:'cons'}],
+edges:[['aryan','sword'],['sword','cross'],['cross','prison','Iorveth'],['cross','henselt','Roche'],['prison','stennis'],['stennis','greater'],['henselt','temeria'],['temeria','anais'],['greater','sile'],['anais','sile'],['sile','dragon'],['dragon','letho']],
+D:[
+{ch:'Prologue: La Valette Castle',id:'aryan',t:'Aryan La Valette',when:'During the storming of the castle, when you come face to face with the commander of the defence.',
+ q:'Do you fight Aryan, or talk him round?',o:[
+ ['spare','Talk him round',['Aryan stays alive; according to SegmentNext you get the Strong Back skill, but escaping the dungeon becomes harder.','In The Witcher 3 a few lines of dialogue at most.']],
+ ['kill','Fight him',['Aryan dies and you then help his mother, Mary Louisa La Valette.','In The Witcher 3 a few lines of dialogue at most.']]]},
+{ch:'Chapter 1: Flotsam',id:'sword',t:'Iorveth\'s sword',when:'At the end of the quest The Assassins of Kings, after the confrontation with the kingslayer, when Roche and Iorveth face each other.',
+ q:'Do you give Iorveth his sword, or help Roche?',o:[
+ ['iorveth','Give Iorveth his sword',['Violence breaks out among the nonhumans in Flotsam; later you find Margot alive and Derae dead.']],
+ ['roche','Help Roche',['Iorveth is taken prisoner; later you find Derae alive.']]],
+ note:'The outcome shapes the next quest, Where Is Triss Merigold?, but does not lock in your path yet: at the end of the chapter you can still go either way.'},
+{ch:'Chapter 1: Flotsam',id:'cross',major:1,t:'At a Crossroads',when:'At the end of chapter 1.',
+ q:'The most important choice in the game: do you leave with Iorveth or with Roche?',o:[
+ ['i','With Iorveth',['Chapter 2 takes place in the dwarven city of Vergen.','According to players this is the more popular half, thanks to Vergen and its quests.','In The Witcher 3, only some dialogue.']],
+ ['r','With Roche',['Chapter 2 takes place in King Henselt\'s army camp; Loredo is killed.','In chapter 3 you get a quest of your own with extra background.','In The Witcher 3, only some dialogue.']]]},
+{ch:'End of chapter 1 and chapter 2: Iorveth\'s path',id:'prison',route:'i',major:1,t:'The Floating Prison',when:'On Iorveth\'s path, at the end of chapter 1.',
+ q:'Do you go after Loredo, or rescue the elven women?',o:[
+ ['loredo','Kill Loredo',['Loredo is taken out and Flotsam stays Temerian (according to SegmentNext).']],
+ ['women','Rescue the women',['Loredo keeps Flotsam in his grip, but Iorveth is pleased; that leads to an intimate scene in chapter 2.']]],
+ note:'According to the official guide, the story on this path branches right here, and this choice, together with the one in chapter 3, forms the four endings of Iorveth\'s path.'},
+{ch:'End of chapter 1 and chapter 2: Iorveth\'s path',id:'stennis',route:'i',t:'The fate of Stennis',when:'In Vergen, when the crowd turns against the prince.',
+ q:'Do you let the crowd have its way, or protect the prince?',o:[
+ ['dies','Let the crowd have its way',['Stennis dies; the royal blood you need can be found on the spot.','According to SegmentNext, Aedirn descends into chaos.']],
+ ['lives','Protect Stennis',['He stays alive; for the royal blood you have to go to Henselt.','According to SegmentNext he becomes king of Aedirn and Saskia\'s opponent.']]]},
+{ch:'Chapter 2: Roche\'s path',id:'henselt',route:'r',major:1,t:'The Siege of Vergen',when:'On Roche\'s path, at the end of chapter 2, when Roche and Henselt face each other.',
+ q:'Do you let Roche kill King Henselt, or stop him?',o:[
+ ['kill','Let Roche do it',['Henselt dies and the Blue Stripes get their revenge; Kaedwen descends into chaos.','Vergen falls either way.']],
+ ['stop','Stop Roche',['Henselt stays in power and Roche is not happy about it.','Vergen falls either way.']]],
+ note:'According to the official guide, this choice, together with the one in chapter 3, forms the four endings of Roche\'s path.'},
+{ch:'Chapter 3: Loc Muinne',id:'greater',route:'i',major:1,t:'For the Greater Good',when:'On Iorveth\'s path, in the Redanian dungeon.',
+ q:'Do you help the prisoner you find there (Philippa Eilhart), or go after Triss?',o:[
+ ['philippa','Help Philippa',['You get the dagger that later lets you break a spell.','You don\'t free Triss; Letho rescues her.','The summit ends badly: bloodshed in Loc Muinne and a witch hunt against mages.']],
+ ['triss','Rescue Triss',['The plot at the summit is foiled and the council of mages is restored.','Without the dagger you can\'t break the spell later.']]]},
+{ch:'Chapter 3: Loc Muinne',id:'temeria',route:'r',major:1,t:'For Temeria!',when:'On Roche\'s path.',
+ q:'Do you help Roche rescue Anaïs La Valette, Foltest\'s daughter, or go after Triss?',o:[
+ ['anais','Rescue Anaïs',['Roche becomes a close ally; you then decide who Anaïs is entrusted to.','The summit ends badly for the mages.']],
+ ['triss','Rescue Triss',['The plot at the summit is foiled and the council of mages is restored.','Anaïs loses her claim to Temeria.']]]},
+{ch:'Chapter 3: Loc Muinne',id:'anais',route:'r',t:'Of His Blood and Bone',when:'Only if you rescued Anaïs.',
+ q:'Do you entrust Anaïs to King Radovid of Redania, or to John Natalis?',o:[
+ ['radovid','Radovid',['Redania takes over Temeria and Anaïs does not become queen.','According to players, an import into game 3 reads this.']],
+ ['natalis','Natalis',['Temeria survives and Anaïs becomes queen.']]]},
+{ch:'Chapter 3: Loc Muinne',id:'sile',t:'Síle\'s fate',when:'On both paths, during or after A Summit of Mages.',
+ q:'Do you save the sorceress Síle de Tansarville, or leave her to her fate?',o:[
+ ['save','Save Síle',['She tells you something about Yennefer and leaves.','In The Witcher 3, a small role in one quest.']],
+ ['leave','Let her die',['She is killed.']]]},
+{ch:'Chapter 3: Loc Muinne',id:'dragon',t:'Enter the Dragon',when:'On both paths, after the summit, in the quest Enter the Dragon.',
+ q:'What do you do with the dragon attacking Loc Muinne?',o:[
+ ['kill','Kill it',['The dragon dies.']],
+ ['release','Let it go',['The dragon survives.']],
+ ['dagger','Break the spell',['Only possible if you helped Philippa on Iorveth\'s path and have the dagger. The dragon turns out to be Saskia and is set free.']]],
+ note:'On Roche\'s path you never find out who the dragon really is.'},
+{ch:'Epilogue',id:'letho',major:1,t:'Final conversation',when:'At the very end, with the man behind the royal assassinations.',
+ q:'Do you fight Letho, or let him go?',o:[
+ ['fight','Fight him',['You keep your promise to Roche; the School of the Viper is broken.','In The Witcher 3 Letho is dead (which is also the default).']],
+ ['free','Let him go',['You lose Roche\'s trust.','In The Witcher 3 you get an extra quest and Letho plays a part in later main quests.']]]}]};
+
+/* ---------- DATA: game 3 ---------- (ci = counts towards Ciri's fate) */
+const W3={key:'w3',name:'The Witcher 3',sub:'Game 3 · 2015 · Wild Hunt, Complete Edition',X0:50,step:205,W:160,H:38,headY:22,lineY:32,oy:915,bh:335,
+cols:['Act I','Act II','Act III','Endings','Hearts of Stone','Blood and Wine'],
+nodes:[
+{id:'imp',c:0,y:50,t:'Imperial Audience',k:'minor'},
+{id:'hillock',c:0,y:102,t:'The Whispering Hillock',k:'major'},
+{id:'keira',c:0,y:154,t:'Keira Metz',k:'minor'},
+{id:'triss',c:0,y:206,t:'Now or Never',k:'minor'},
+{id:'gambit',c:0,y:258,t:'King\'s Gambit',k:'major'},
+{id:'yen',c:1,y:50,t:'The Last Wish',k:'minor'},
+{id:'brothers',c:1,y:115,t:'Brothers in Arms',k:'minor'},
+{id:'snow',c:1,y:180,t:'After the battle',k:'major',ci:1},
+{id:'emhyr',c:1,y:245,t:'Visiting the Emperor',k:'major',ci:1},
+{id:'lab',c:2,y:50,t:'The laboratory',k:'major',ci:1},
+{id:'grave',c:2,y:110,t:'Skjall\'s grave',k:'major',ci:1},
+{id:'lodge',c:2,y:170,t:'Final Preparations',k:'major',ci:1},
+{id:'reason',c:2,y:245,t:'Reason of State',k:'major'},
+{id:'eciri',c:3,y:80,t:'Ciri\'s fate',k:'end'},
+{id:'eworld',c:3,y:170,t:'Fate of the world',k:'end'},
+{id:'egeralt',c:3,y:260,t:'Geralt\'s fate',k:'end'},
+{id:'hos',c:4,y:150,t:'Whatsoever a Man Soweth',k:'major'},
+{id:'baw',c:5,y:150,t:'Night of Long Fangs',k:'major'}],
+edges:[['imp','brothers'],['keira','brothers'],['triss','brothers'],['gambit','brothers'],['triss','egeralt'],['yen','egeralt'],['snow','eciri'],['emhyr','eciri'],['lab','eciri'],['grave','eciri'],['lodge','eciri'],['reason','eciri'],['reason','eworld'],['gambit','eworld'],['emhyr','eworld']],
+D:[
+{ch:'Act I: Velen, Novigrad and Skellige',id:'imp',t:'Imperial Audience',when:'In Vizima, right after the prologue in White Orchard.',
+ q:'If you didn\'t import a save from game 2 but chose to simulate one, Morvran Voorhis asks you questions about game 2 here. This card sums up the most important answer: is Letho alive?',o:[
+ ['alive','Letho is alive',['Later you get an extra quest with him and he can fight alongside you at Kaer Morhen.']],
+ ['dead','Letho is dead',['That quest and that help are gone; this is also the default without an import or simulation.']]],
+ note:'The other questions (Aryan, Roche or Iorveth, Triss, Síle) have few consequences in this game; see the game 2 tab.'},
+{ch:'Act I: Velen, Novigrad and Skellige',id:'hillock',major:1,t:'The Whispering Hillock',when:'In Velen, at the old oak south of Downwarren, during the Bloody Baron\'s story.',
+ q:'Do you free the spirit in the tree, or destroy it?',o:[
+ ['free','Free it',['The orphans are saved, but the spirit ravages Downwarren.','Anna dies and the Baron hangs himself in grief.']],
+ ['destroy','Destroy it',['The orphans fall prey to the Ladies of the Wood.','Anna loses her mind; the Baron takes her south to seek a cure.']]],
+ note:'According to players, order matters: if you free the spirit before speaking with the Ladies of the Wood, Anna and the Baron get a kinder outcome. Otherwise the Baron\'s story is separate from the endings.'},
+{ch:'Act I: Velen, Novigrad and Skellige',id:'keira',t:'Keira Metz',when:'At the end of her side story in Velen (For the Advancement of Learning).',
+ q:'Keira has found dangerous notes. What happens to her? Note: this depends on your tone in the conversation, not on a single button.',o:[
+ ['kaer','She goes to Kaer Morhen',['You get the notes without a fight; Keira later helps defend Kaer Morhen and saves a friend of yours there.','A romance with her is then no longer possible.']],
+ ['radovid','She goes to Radovid',['Later you hear she met a gruesome end.']],
+ ['fight','It comes to a fight',['Hostile or insulting answers lead to a fight in which Keira dies.']]]},
+{ch:'Act I: Velen, Novigrad and Skellige',id:'triss',t:'Now or Never',when:'In Novigrad, at the end of Triss\'s side story.',
+ q:'Do you ask Triss to stay and tell her you love her, or let her go?',o:[
+ ['stay','Ask her to stay',['The romance with Triss has begun; it helps decide how things end for Geralt.','You can only continue with one of the two, Triss or Yennefer.']],
+ ['leave','Let her go',['Triss is no longer a romantic partner, but she doesn\'t disappear from the story.']]]},
+{ch:'Act I: Velen, Novigrad and Skellige',id:'gambit',major:1,t:'King\'s Gambit',when:'On Skellige, after you have helped Hjalmar and Cerys with their own quests.',
+ q:'Do you help Cerys, help Hjalmar, or let the clans sort it out themselves?',o:[
+ ['cerys','Help Cerys',['You unmask who was behind the massacre; Cerys becomes queen of Skellige.']],
+ ['hjalmar','Help Hjalmar',['More fighting, and you never learn who was behind the massacre; Hjalmar becomes king.']],
+ ['none','Help no one',['Svanrige becomes king; Cerys and Hjalmar sail out against the Nilfgaardian fleet and never return.']]]},
+{ch:'Act II: Kaer Morhen',id:'yen',t:'The Last Wish',when:'A side quest with Yennefer on Skellige.',
+ q:'At the end, do you say you love Yennefer?',o:[
+ ['yes','Yes',['The romance with Yennefer is sealed; it helps decide how things end for Geralt.','You can only continue with one of the two, Triss or Yennefer.']],
+ ['no','No',['No romance with Yennefer.']]]},
+{ch:'Act II: Kaer Morhen',id:'brothers',t:'Brothers in Arms',when:'Before the defence of Kaer Morhen, when you look for allies in Velen, Novigrad and Skellige.',
+ q:'How much help do you bring? This follows from earlier side quests (including Keira, Roche and Ves, Zoltan, Letho, Hjalmar and Ermion).',o:[
+ ['many','Many allies',['The defence is stronger and more familiar faces stand at your side. The rest of the story barely changes because of it.']],
+ ['few','Few allies',['You fight with a smaller group; the story then continues the same way.']]]},
+{ch:'Act II: Kaer Morhen',id:'snow',ci:1,major:1,t:'After the battle',when:'Right after the battle of Kaer Morhen (Blood on the Battlefield), when Ciri is struggling.',
+ q:'How do you cheer Ciri up: with a snowball fight or with a drink?',o:[
+ ['snowballs','Snowball fight',['Counts positively towards Ciri\'s fate. Whether you win the fight doesn\'t matter.']],
+ ['drinks','A drink',['Counts negatively towards Ciri\'s fate.']]]},
+{ch:'Act II: Kaer Morhen',id:'emhyr',ci:1,major:1,t:'Visiting the Emperor',when:'Also in Blood on the Battlefield: do you take Ciri to see her father, Emperor Emhyr?',
+ q:'Do you go to Emhyr with Ciri, and if so, do you accept his reward?',o:[
+ ['refuse','Go and refuse the reward',['Counts positively towards Ciri\'s fate.','Opens the way to the ending in which Ciri becomes empress, if the political condition is also met.']],
+ ['accept','Go and accept the reward',['Counts negatively towards Ciri\'s fate.']],
+ ['skip','Don\'t go',['According to most guides this counts as positive, but Ciri can then not become empress.']]]},
+{ch:'Act III: hunting the Wild Hunt',id:'lab',ci:1,major:1,t:'The laboratory',when:'On Skellige, in Avallac\'h\'s laboratory (Child of the Elder Blood).',
+ q:'Ciri wants to vent her anger on the laboratory. Do you encourage her, or tell her to calm down?',o:[
+ ['vent','Let her go ahead',['Counts positively towards Ciri\'s fate.']],
+ ['calm','Calm her down',['Counts negatively towards Ciri\'s fate.']]]},
+{ch:'Act III: hunting the Wild Hunt',id:'grave',ci:1,major:1,t:'Skjall\'s grave',when:'Shortly afterwards, when Ciri wants to visit a grave on Skellige.',
+ q:'Do you go with her, or say there\'s no time?',o:[
+ ['go','Go with her',['Counts positively towards Ciri\'s fate.']],
+ ['notime','No time',['Counts negatively towards Ciri\'s fate.']]]},
+{ch:'Act III: hunting the Wild Hunt',id:'lodge',ci:1,major:1,t:'Final Preparations',when:'When the Lodge of Sorceresses wants to speak with Ciri.',
+ q:'Do you let Ciri go alone, or go with her?',o:[
+ ['alone','Let her go alone',['Counts positively towards Ciri\'s fate.']],
+ ['along','Go with her',['Counts negatively towards Ciri\'s fate.']]]},
+{ch:'Act III: hunting the Wild Hunt',id:'reason',major:1,t:'Reason of State',when:'Only if you previously did the quests around Roche, Dijkstra and the plot against King Radovid (A Deadly Plot, Blindingly Obvious, An Eye for an Eye and Redania\'s Most Wanted) and gave Dijkstra information.',
+ q:'Do you take part in the assassination of Radovid, and then side with Roche or with Dijkstra?',o:[
+ ['none','Don\'t take part',['Radovid wins the war and drives Nilfgaard back.']],
+ ['roche','Take part and protect Roche',['You fight Dijkstra. Nilfgaard wins the war, but Emhyr lets Temeria survive as a vassal state.','Required for the ending in which Ciri becomes empress.']],
+ ['dijkstra','Take part and let Dijkstra have his way',['Roche, Ves and Thaler die; Dijkstra takes power in Redania and continues the war.']]]},
+{ch:'Hearts of Stone',id:'hos',major:1,t:'Whatsoever a Man Soweth',when:'In the final quest, when Gaunter O\'Dimm comes to collect what he is owed.',
+ q:'Do you step in, or let it happen?',o:[
+ ['help','Help Olgierd',['You have to solve a riddle within the time limit. If you do, Olgierd is free and you get his sword; if you fail, you both lose your souls.']],
+ ['stay','Stay out of it',['O\'Dimm takes Olgierd; you get to choose a powerful reward.']]]},
+{ch:'Blood and Wine',id:'baw',major:1,t:'Night of Long Fangs',when:'Halfway through the expansion, when you have to track down a vampire.',
+ q:'Do you find the vampire through Syanna, or through the Unseen Elder?',o:[
+ ['syanna','Through Syanna',['Opens the way to the best ending, but that takes more: bringing a ribbon from the Land of a Thousand Fables and later convincing Syanna with the right words.','Without the ribbon Syanna dies; if you fail to convince her, both sisters die.']],
+ ['elder','Through the Unseen Elder',['According to the guides this leads to the worst ending: both sisters die.']]]}]};
+
+const G={w1:W1,w2:W2,w3:W3};
+for(const g of Object.values(G))g.P=Object.fromEntries(g.nodes.map(n=>[n.id,n]));
+const SAMPLE1={pro:'triss',crates:'refuse',vesna:'yes',leo:'talk',abigail:'protect',sewers:'alone',invest:'azar',swamp:'neutral',alvin:'triss',vincent:'cure',thaler:'lives',bank:'yaevinn',lake:'compromise',berengar:'spare',path:'neutral',adda:'save',hunt:'refuse'};
+const PATH_NAME={i:'Iorveth\'s path',r:'Roche\'s path'};
+/* consequence nodes that belong to a choice card (for labels and jumping) */
+const PARENT={'w1.xbridge':'w1.pro','w1.xcoleman':'w1.crates','w1.xheat':'w1.abigail','w1.xazar':'w1.berengar','w1.xarmor':'w1.path'};
+/* where a click on a tree node should take you: a card, an outcome section (out:) or an element (el:id:tab) */
+const JUMP={...PARENT,'w1.xepilogue':'out:w1','w1.xw2':'el:bridge-w1:w1','w2.imp1':'el:carry-w1:w2','w2.w3':'el:bridge-w2:w2','w3.eciri':'out:w3','w3.eworld':'out:w3','w3.egeralt':'out:w3'};
+
+/* ---------- STATE ----------
+   S: chosen option per card ("w1.adda" -> "save"), R: revealed cards, SP: show all spoilers, TAB: active tab */
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+let S={},R={},SP=false,TAB='w1';
+try{
+ S=JSON.parse(store.get('trilogy-s')||'{}')||{};
+ R=JSON.parse(store.get('trilogy-r')||'{}')||{};
+ SP=store.get('trilogy-sp')==='1';
+ TAB=store.get('trilogy-tab')||'w1';
+}catch(e){S={};R={}}
+if(!G[TAB])TAB='w1';
+const save=()=>{store.set('trilogy-s',JSON.stringify(S));store.set('trilogy-r',JSON.stringify(R));store.set('trilogy-sp',SP?'1':'0');store.set('trilogy-tab',TAB)};
+
+const revealed=k=>SP||!!R[k];
+/* the value of a choice; the Imperial Audience in game 3 follows Letho's fate in game 2 */
+const val=k=>{if(k==='w3.imp'&&shown('w2.letho'))return S['w2.letho']==='free'?'alive':'dead';return S[k]};
+const shown=k=>revealed(k)&&val(k)!=null;
+const decision=k=>G[k.slice(0,2)].D.find(d=>d.id===k.slice(3));
+const label=k=>{const d=decision(k);const o=d&&d.o.find(x=>x[0]===val(k));return o?o[1]:''};
+/* in game 1, the bank robbery limits the final path */
+const blocked=(k,v)=>k==='w1.path'&&((S['w1.bank']==='yaevinn'&&v==='order')||(S['w1.bank']==='siegfried'&&v==='elves'));
+function normalize(){
+ if(S['w1.bank']==='yaevinn'&&S['w1.path']==='order')S['w1.path']='neutral';
+ if(S['w1.bank']==='siegfried'&&S['w1.path']==='elves')S['w1.path']='neutral';
+}
+
+/* ---------- TREE ---------- */
+const svg=document.getElementById('tree');
+const colX=(g,c)=>g.X0+c*g.step;
+function curve(g,a,b,style){
+ const p=g.P[a],q=g.P[b];let x1=colX(g,p.c)+g.W,y1=g.oy+p.y+g.H/2,x2=colX(g,q.c)-3,y2=g.oy+q.y+g.H/2;
+ if(p.c===q.c){x1=colX(g,p.c)+g.W/2;y1=g.oy+p.y+g.H;x2=x1;y2=g.oy+q.y-3;return `<path d="M${x1},${y1} L${x2},${y2}" ${style}/>`}
+ const first=g.key==='w1';const dx=Math.max(first?40:30,(x2-x1)*(first?.45:.5));
+ return `<path d="M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}" ${style}/>`;
+}
+/* the save thread: from the import node at the end of one band, down the gap, into the first node of the next band */
+function saveThread(fromG,fromId,toG,toId,gapY,text){
+ const p=fromG.P[fromId],q=toG.P[toId],r=10;
+ const x1=colX(fromG,p.c)+fromG.W,y1=fromG.oy+p.y+fromG.H/2,xr=x1+14;
+ const x2=colX(toG,q.c)-3,y2=toG.oy+q.y+toG.H/2,xl=28;
+ return `<path d="M${x1},${y1} L${xr-r},${y1} Q${xr},${y1} ${xr},${y1+r} L${xr},${gapY-r} Q${xr},${gapY} ${xr-r},${gapY} L${xl+r},${gapY} Q${xl},${gapY} ${xl},${gapY+r} L${xl},${y2-r} Q${xl},${y2} ${xl+r},${y2} L${x2},${y2}" fill="none" stroke="#f08a91" stroke-width="2.6" stroke-dasharray="9 5" marker-end="url(#as)"/><text x="${(xl+xr)/2}" y="${gapY-7}" text-anchor="middle" font-size="12.5" fill="#f08a91">${text}</text>`;
+}
+function node(g,n){
+ const k=g.key+'.'+n.id,x=colX(g,n.c),y=g.oy+n.y,W=g.W,H=g.H;
+ const pathColor=n.r==='i'?'#6fb07c':n.r==='r'?'#7ea3dc':'#9aa0a7';
+ let style;
+ if(n.k==='major'){const sc=n.ci?'#8cc7e0':n.r?pathColor:'#ece9e3';style=`fill="#ece9e3" stroke="${sc}" stroke-width="${n.ci||n.r?3:1}"`}
+ else if(n.k==='minor')style=`fill="#262a2f" stroke="${pathColor}" stroke-width="1.5"`;
+ else style='fill="#1c1f23" stroke="#9aa0a7" stroke-width="1.5" stroke-dasharray="5 4"';
+ const textColor=n.k==='major'?'#17191c':'#ece9e3';
+ const text=n.h&&!revealed(PARENT[k]||k)?n.h:n.t;
+ const offPath=g.key==='w2'&&n.r&&shown('w2.cross')&&val('w2.cross')!==n.r;
+ const done=shown(k);
+ const dot=done?`<circle cx="${x+W-9}" cy="${y+9}" r="4.5" fill="#e3545e" stroke="${n.k==='major'?'#ece9e3':'#262a2f'}" stroke-width="1.5"/>`:'';
+ return `<g class="n" tabindex="0" role="link" data-k="${k}" aria-label="${text}${done?' (chosen)':''}"${offPath?' opacity=".35"':''}><rect x="${x}" y="${y}" width="${W}" height="${H}" rx="6" ${style}/><text x="${x+W/2}" y="${y+H/2+4.5}" text-anchor="middle" font-size="13" font-weight="${n.k==='major'?700:400}" fill="${textColor}">${text}</text>${dot}</g>`;
+}
+function drawTree(){
+ let h='<defs>'+[['ar','#e3545e'],['ai','#8cc7e0'],['as','#f08a91']].map(([id,c])=>`<marker id="${id}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="${c}"/></marker>`).join('')+'</defs>';
+ const nodes=[];
+ for(const g of [W1,W2,W3]){
+  h+=`<rect x="8" y="${g.oy-38}" width="1322" height="${g.bh+38}" rx="12" fill="#ffffff" fill-opacity=".03"/>`;
+  h+=`<g class="n bt" tabindex="0" role="link" data-k="tab:${g.key}" aria-label="Open ${g.sub}"><text x="${g.X0}" y="${g.oy-12}" font-family="Cinzel,serif" font-size="21" font-weight="700" fill="#ece9e3">${g.name}<tspan dx="14" font-family="'Source Sans 3',sans-serif" font-size="13.5" font-weight="400" fill="#9aa0a7">${g.sub}</tspan></text></g>`;
+  h+=g.cols.map((t,i)=>`<text x="${colX(g,i)+g.W/2}" y="${g.oy+g.headY}" text-anchor="middle" font-family="Cinzel,serif" font-size="14" font-weight="700" fill="currentColor">${t}</text><line x1="${colX(g,i)}" x2="${colX(g,i)+g.W}" y1="${g.oy+g.lineY}" y2="${g.oy+g.lineY}" stroke="#4a4f55"/>`).join('');
+  if(g.key==='w2'){
+   const x=colX(g,2)-20,w=colX(g,3)+g.W+20-x;
+   h+=`<rect x="${x}" y="${g.oy+48}" width="${w}" height="120" rx="10" fill="#6fb07c" fill-opacity=".10"/><text x="${x+8}" y="${g.oy+162}" font-size="12" fill="#6fb07c">Iorveth's path</text>`;
+   h+=`<rect x="${x}" y="${g.oy+288}" width="${w}" height="112" rx="10" fill="#7ea3dc" fill-opacity=".10"/><text x="${x+8}" y="${g.oy+396}" font-size="12" fill="#7ea3dc">Roche's path</text>`;
+   h+=g.nodes.filter(n=>n.w3).map(n=>curve(g,n.id,'w3','fill="none" stroke="#9aa0a7" stroke-opacity=".55" stroke-width="1.3" stroke-dasharray="5 4"')).join('');
+   h+=g.edges.map(([a,b,l])=>curve(g,a,b,'fill="none" stroke="#e3545e" stroke-width="1.8" marker-end="url(#ar)"')+(l?`<text x="${colX(g,1)+117}" y="${g.oy+(l==='Iorveth'?150:290)}" font-size="12" fill="${l==='Iorveth'?'#6fb07c':'#7ea3dc'}">${l}</text>`:'')).join('');
+  }else if(g.key==='w3'){
+   h+=`<line x1="${colX(g,4)-17}" x2="${colX(g,4)-17}" y1="${g.oy+40}" y2="${g.oy+330}" stroke="#4a4f55" stroke-dasharray="3 5"/><text x="${colX(g,4)+g.W+22}" y="${g.oy+320}" text-anchor="middle" font-size="12" fill="#9aa0a7">expansions</text>`;
+   h+=g.edges.map(([a,b])=>{const ci=g.P[a].ci||(a==='reason'&&b==='eciri');return curve(g,a,b,`fill="none" stroke="${ci?'#8cc7e0':'#e3545e'}" stroke-opacity=".8" stroke-width="1.6" marker-end="url(#${ci?'ai':'ar'})"`)}).join('');
+  }else{
+   h+=g.edges.map(([a,b])=>curve(g,a,b,'fill="none" stroke="#e3545e" stroke-opacity=".75" stroke-width="1.6" marker-end="url(#ar)"')).join('');
+  }
+  nodes.push(...g.nodes.map(n=>node(g,n)));
+ }
+ h+=saveThread(W1,'xw2',W2,'imp1',386,'your save carries over to The Witcher 2');
+ h+=saveThread(W2,'w3',W3,'imp',861,'your save carries over to The Witcher 3');
+ svg.innerHTML=h+nodes.join('');
+}
+
+/* ---------- TABS ---------- */
+const tabs=[...document.querySelectorAll('.tab')];
+function activate(g,focus){
+ const changed=g!==TAB;TAB=g;
+ for(const t of tabs){const on=t.dataset.tab===g;t.setAttribute('aria-selected',on);t.tabIndex=on?0:-1;document.getElementById('panel-'+t.dataset.tab).hidden=!on}
+ /* open the outcome section of the active game */
+ if(changed||!activate.done){for(const k of ['w1','w2','w3'])document.getElementById('sum-'+k).open=k===g;activate.done=1}
+ if(focus)document.getElementById('tab-'+g).focus();
+ save();
+}
+document.getElementById('tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(t)activate(t.dataset.tab)});
+document.getElementById('tabs').addEventListener('keydown',e=>{
+ const i=tabs.findIndex(t=>t.dataset.tab===TAB);let j=null;
+ if(e.key==='ArrowRight')j=(i+1)%3;else if(e.key==='ArrowLeft')j=(i+2)%3;else if(e.key==='Home')j=0;else if(e.key==='End')j=2;
+ if(j!==null){e.preventDefault();activate(tabs[j].dataset.tab,true)}
+});
+const motion=()=>matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+function jump(k){
+ let el;
+ if(k.startsWith('tab:')){activate(k.slice(4));el=document.getElementById('tabs')}
+ else{
+  const t=JUMP[k]||k;
+  if(t.startsWith('out:')){const g=t.slice(4);activate(g);document.getElementById('sum-'+g).open=true;el=document.querySelector('.out')}
+  else if(t.startsWith('el:')){const [,id,g]=t.split(':');activate(g);el=document.getElementById(id);if(el.tagName==='DETAILS')el.open=true}
+  else{activate(t.slice(0,2));el=document.getElementById('d-'+t.replace('.','-'))}
+ }
+ if(el)el.scrollIntoView({behavior:motion(),block:'start'});
+}
+svg.addEventListener('click',e=>{const g=e.target.closest('.n');if(g)jump(g.dataset.k)});
+svg.addEventListener('keydown',e=>{const g=e.target.closest('.n');if(g&&(e.key==='Enter'||e.key===' ')){e.preventDefault();jump(g.dataset.k)}});
+
+/* ---------- CARDS ---------- */
+function extras(k){
+ const L=[];
+ if(k==='w3.brothers'){
+  if(val('w3.imp')==='alive')L.push('Letho is alive in your playthrough and can fight alongside you.');
+  if(shown('w3.keira')&&val('w3.keira')==='kaer')L.push('Keira Metz stands at your side.');
+ }
+ return L.length?`<p class="small" style="margin-top:8px">In your playthrough: ${L.join(' ')}</p>`:'';
+}
+function card(g,d){
+ const k=g.key+'.'+d.id,open=revealed(k),cur=val(k);
+ const offPath=g.key==='w2'&&d.route&&shown('w2.cross')&&val('w2.cross')!==d.route;
+ const locked=k==='w3.imp'&&shown('w2.letho');
+ const cls='card'+(d.major?' major':'')+(d.route?' r-'+(d.route==='i'?'iorveth':'roche'):'')+(d.ci?' ciri':'')+(offPath?' off':'');
+ let h=`<div class="${cls}" id="d-${g.key}-${d.id}"><div class="tag">${d.major?'<b>Major choice</b>':'Minor choice'}${d.route?' · '+PATH_NAME[d.route]:''}${d.ci?' · counts towards Ciri':''}${offPath?' · not on your path':''}${locked?' · carried over from game 2':''}</div><h4>${open?d.t:(d.ht||d.t)}</h4><p>${d.when}</p>`;
+ if(!open)h+=`<button class="btn reveal" type="button" data-rev="${k}">I'm here: show the choice</button>`;
+ else{
+  h+=`<p>${d.q}</p><div class="opts">${d.o.map(x=>`<button class="opt" type="button" data-k="${k}" data-v="${x[0]}" aria-pressed="${cur===x[0]}"${locked||blocked(k,x[0])?' disabled':''}>${x[1]}</button>`).join('')}</div>`;
+  if(locked)h+=`<p class="small lock" style="margin-top:8px">Set by your choice in game 2 at the final conversation: ${label('w2.letho').toLowerCase()}.</p>`;
+  else if(k==='w3.imp')h+='<p class="small" style="margin-top:8px">Once you choose at the final conversation in game 2, this is filled in automatically.</p>';
+  if(k==='w1.path'&&S['w1.bank'])h+=`<p class="small" style="margin-top:8px">Because of your choice during the bank robbery, you can no longer choose ${S['w1.bank']==='yaevinn'?'the Order':'the Scoia\'tael'}.</p>`;
+  const o=d.o.find(x=>x[0]===cur);
+  h+=o?`<ul class="fx">${o[2].map(f=>`<li>${f}</li>`).join('')}</ul>`:'<p class="small" style="margin-top:8px">The consequences appear once you choose.</p>';
+  h+=extras(k);
+  if(d.note)h+=`<p class="small" style="margin-top:8px">${d.note}</p>`;
+ }
+ return h+'</div>';
+}
+function cards(g){
+ let html='',last='';
+ for(const d of g.D){
+  if(d.ch!==last){if(last)html+='</div>';html+=`<div class="ch"><h3>${d.ch}</h3>`;last=d.ch}
+  html+=card(g,d);
+ }
+ document.getElementById('cards-'+g.key).innerHTML=html+'</div>';
+}
+
+/* ---------- CARRY-OVER BETWEEN GAMES ---------- */
+const v1=id=>shown('w1.'+id)?val('w1.'+id):null;
+const v2=id=>shown('w2.'+id)?val('w2.'+id):null;
+const v3=id=>shown('w3.'+id)?val('w3.'+id):null;
+function carryFrom1(){
+ const L=[],adda=v1('adda'),thaler=v1('thaler'),path=v1('path'),lake=v1('lake'),alvin=v1('alvin');
+ if(adda)L.push(adda==='save'?'Foltest mentions Adda: she is alive and married to Radovid':'Adda is dead, just as without an import');
+ if(thaler)L.push(thaler==='lives'?'a messenger from Thaler with a package':'no messenger from Thaler');
+ if(path)L.push(`your bond with Siegfried and Yaevinn is mentioned${path==='order'?'; as an Order player, a few extra effects in chapter 3':''}`);
+ if(path||lake)L.push(`equipped swords${lake==='compromise'?' (Aerondight, for example)':''} and your Raven's armor carry over, but weaker`);
+ if(alvin)L.push(alvin==='shani'?'game 2 follows the Triss storyline anyway':'game 2 continues your choice of Triss');
+ return L;
+}
+function carryFrom2(){
+ const L=[],cross=v2('cross');
+ if(v2('letho'))L.push(v2('letho')==='free'?'Letho is alive: an extra quest and a part in later main quests':'Letho is dead, as by default');
+ if(v2('sile'))L.push(v2('sile')==='save'?'Síle has a small role':'Síle does not appear');
+ if(cross==='r'&&v2('anais'))L.push(v2('anais')==='radovid'?'an import reads that Radovid has Anaïs':'Anaïs is with Natalis');
+ if(v2('greater')||v2('temeria'))L.push('Triss is alive either way');
+ if(cross)L.push(`you went with ${cross==='i'?'Iorveth':'Roche'}: only some dialogue`);
+ if(v2('aryan'))L.push('Aryan: only some dialogue');
+ return L;
+}
+function carryBoxes(){
+ const c1=carryFrom1(),c2=carryFrom2();
+ document.getElementById('carry-w1').innerHTML='<h3>Carried over from game 1</h3>'+(c1.length?`<ul>${c1.map(x=>`<li>${x}</li>`).join('')}</ul><p class="small">This does not change the story of game 2; it is about references and gear.</p>`:'<p>No choices from game 1 recorded yet. Without an import, game 2 starts with the default: Adda is dead and Thaler sends nothing.</p>');
+ document.getElementById('carry-w2').innerHTML='<h3>Carried over from game 2</h3>'+(c2.length?`<ul>${c2.map(x=>`<li>${x}</li>`).join('')}</ul>`:'<p>No choices from game 2 recorded yet. Without an import, Letho is dead and Triss has no special feelings for Geralt.</p>')+'<p class="small">Nothing from game 1 carries over to game 3.</p>';
+}
+
+/* ---------- OUTCOME ---------- */
+const row=(t,x)=>`<dt>${t}</dt><dd>${x}</dd>`;
+const FACTION={order:'the Order',elves:'the Scoia\'tael',neutral:'neutral'};
+function outcome1(){
+ let h='';
+ const path=v1('path'),swamp=v1('swamp');
+ if(path){
+  h+=row('Path',FACTION[path]+(swamp&&swamp!==path?'; in the swamp you still chose differently':''));
+  h+=row('Enemies in chapter V',{order:'the Scoia\'tael',elves:'the Order',neutral:'both the Order and the Scoia\'tael'}[path]);
+  h+=row('Armor',{order:'the Order\'s Raven\'s armor',elves:'the elven Raven\'s armor',neutral:'the neutral Raven\'s armor'}[path]);
+ }else if(swamp)h+=row('Provisional side (swamp)',FACTION[swamp]);
+ if(v1('lake'))h+=row('Sword at the lake',{village:'no sword, but a large diamond',vodyanoi:'the ceremonial sword of Deithwen',compromise:'Aerondight'}[v1('lake')]);
+ if(v1('berengar'))h+=row('Final fight with Azar',v1('berengar')==='kill'?'Azar is weakened by Berengar\'s medallion':'Berengar fights alongside you');
+ if(path)h+=row('Through Vizima in the epilogue',{order:'Siegfried',elves:'Yaevinn',neutral:'Triss'}[path]+' fights alongside you');
+ const helpers=[];
+ if(v1('alvin'))helpers.push(v1('alvin')==='triss'?'Triss':'Shani');
+ if(v1('adda'))helpers.push(v1('adda')==='save'?'Adda as a striga':v1('vincent')?(v1('vincent')!=='kill'?'Vincent as a werewolf':'Count de Wett'):'Vincent as a werewolf or Count de Wett');
+ if(v1('abigail')==='protect')helpers.push('Abigail (if she survived the Beast)');
+ if(helpers.length)h+=row('Helpers in the epilogue',helpers.join(', '));
+ const foes=[];
+ if(v1('abigail')==='surrender')foes.push('Abigail');
+ if(path)foes.push({order:'Yaevinn\'s ghost',elves:'Siegfried\'s ghost',neutral:'the ghosts of Siegfried and Yaevinn (earlier: a fight or a peaceful parting)'}[path]);
+ if(foes.length)h+=row('Opponents in the epilogue',foes.join(', '));
+ if(v1('hunt'))h+=row('King of the Wild Hunt',v1('hunt')==='refuse'?'a fight with ghosts':'no fight, less XP');
+ return h||row('Nothing chosen yet','Reveal a card in game 1 and make a choice, or load the sample route.');
+}
+function outcome2(){
+ let h='';const cross=v2('cross');
+ h+=row('Path',cross?(cross==='i'?'Iorveth: chapter 2 in Vergen':'Roche: chapter 2 in Henselt\'s camp'):'not chosen yet');
+ for(const id of ['aryan','sword','prison','stennis','henselt','greater','temeria','anais','sile','dragon','letho']){
+  const d=W2.D.find(x=>x.id===id);if(d.route&&cross&&cross!==d.route)continue;
+  if(v2(id))h+=row(d.t,label('w2.'+id));
+ }
+ if(cross==='i'&&v2('prison')&&v2('greater'))h+=row('Your ending','one of the four endings of Iorveth\'s path: '+label('w2.prison').toLowerCase()+' and '+label('w2.greater').toLowerCase());
+ if(cross==='r'&&v2('henselt')&&v2('temeria'))h+=row('Your ending','one of the four endings of Roche\'s path: Henselt '+(v2('henselt')==='kill'?'killed':'spared')+' and '+label('w2.temeria').toLowerCase());
+ const c=carryFrom1();
+ h+=`<div class="carryrow">${row('From game 1',c.length?c.join('; '):'no import: the default situation')}</div>`;
+ return h;
+}
+function outcome3(){
+ let h='';
+ for(const d of W3.D)if(v3(d.id))h+=row(d.t,label('w3.'+d.id));
+ if(!h)h+=row('Nothing revealed yet','Click "I\'m here" on a card once you get there.');
+ /* Ciri's fate: at least 3 of the 5 moments positive; empress also needs Emhyr visited and Roche protected in Reason of State */
+ const ciri=['snow','emhyr','lab','grave','lodge'];let e='';
+ if(ciri.every(v3)){
+  const pos=(v3('snow')==='snowballs')+(v3('emhyr')!=='accept')+(v3('lab')==='vent')+(v3('grave')==='go')+(v3('lodge')==='alone');
+  let t=`${pos} of the 5 moments positive. `;
+  if(pos<3)t+='Ciri does not survive.';
+  else if(v3('emhyr')!=='skip'&&v3('reason')==='roche')t+='Ciri survives and becomes Empress of Nilfgaard.';
+  else if(v3('emhyr')!=='skip'&&!v3('reason'))t+='Ciri survives; whether she becomes empress or a witcher still depends on Reason of State.';
+  else t+='Ciri survives and takes the witcher\'s path.';
+  e+=row('Ciri\'s fate',t);
+ }else e+=row('Ciri\'s fate','First reveal all five moments that count.');
+ if(v3('reason'))e+=row('The North',{none:'Radovid wins the war.',roche:'Nilfgaard wins; Temeria survives as a vassal state.',dijkstra:'Dijkstra takes power in Redania.'}[v3('reason')]);
+ if(v3('gambit'))e+=row('Skellige',{cerys:'Cerys rules.',hjalmar:'Hjalmar rules.',none:'Svanrige rules.'}[v3('gambit')]);
+ if(v3('triss')||v3('yen')){const t=v3('triss')==='stay',y=v3('yen')==='yes';e+=row('Geralt',t&&y?'You chose both, but you can\'t keep them both.':t?'Geralt chooses a life with Triss.':y?'Geralt chooses a life with Yennefer.':'Geralt stays alone, unless you still pick a romance.')}
+ if(v3('hos'))e+=row('Hearts of Stone',v3('hos')==='help'?'Olgierd is free, if you solve the riddle.':'O\'Dimm gets his soul; you get a reward.');
+ if(v3('baw'))e+=row('Blood and Wine',v3('baw')==='syanna'?'The best ending is still possible.':'Both sisters die.');
+ const c=carryFrom2();
+ return h+`<div class="end">${e}</div><div class="carryrow">${row('From game 2',c.length?c.join('; '):'no import: Letho is dead, as by default')}</div>`;
+}
+
+/* ---------- RENDER ---------- */
+const spHide=document.getElementById('sp-hide'),spShow=document.getElementById('sp-show');
+function render(){
+ normalize();
+ for(const g of [W1,W2,W3])cards(g);
+ carryBoxes();
+ document.getElementById('out-w1').innerHTML=outcome1();
+ document.getElementById('out-w2').innerHTML=outcome2();
+ document.getElementById('out-w3').innerHTML=outcome3();
+ drawTree();
+ spHide.setAttribute('aria-pressed',!SP);spShow.setAttribute('aria-pressed',SP);
+ save();
+}
+document.querySelector('.grid').addEventListener('click',e=>{
+ const rv=e.target.closest('[data-rev]');
+ if(rv){const k=rv.dataset.rev;R[k]=1;render();const b=document.querySelector(`#d-${k.replace('.','-')} .opt:not(:disabled)`);if(b)b.focus();return}
+ const b=e.target.closest('.opt');if(!b||b.disabled)return;
+ S[b.dataset.k]=b.dataset.v;render();
+ const nb=document.querySelector(`.opt[data-k="${b.dataset.k}"][data-v="${b.dataset.v}"]`);if(nb)nb.focus();
+});
+spHide.addEventListener('click',()=>{SP=false;render()});
+spShow.addEventListener('click',()=>{SP=true;render()});
+document.getElementById('reset-all').addEventListener('click',()=>{if(!confirm('Clear all choices and revealed cards in all three games?'))return;S={};R={};SP=false;render()});
+document.getElementById('sample').addEventListener('click',()=>{for(const k in SAMPLE1){S['w1.'+k]=SAMPLE1[k];R['w1.'+k]=1}render()});
+
+activate(TAB);
+render();
+}
+</script>
+</body>
+</html>
